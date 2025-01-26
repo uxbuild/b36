@@ -3,14 +3,9 @@
 ## TO DO:
 - authenticate(): check username + password / DONE
 - findUserByToken uses ID, change to TOKEN / DONE
-- GET api/users/:id/userSkills not secure (use auth.id) / DONE
-- POST api/users/:id/userSkills not secure (use auth.id) / DONE
-- DELETE api/users/:id/userSkills not secure / DONE
-- authenticate(): bcrypt.compare() login password with encrypted DB pw / DONE
-- GET api/auth/me JWT / DONE
-- GET api/users/:id/favorites JWT / DONE
-- POST api/users/:id/favorites JWT / DONE
-- DELETE api/users/:id/favorites JWT / DONE
+- route: get favorites (GET api/users/id/favorites) DONE
+- route: add favorite (POST api/users/id/favorites) DONE
+- route: remove favorite (DELETE api/users/userid/favorites/id) DONE
 - (+) ability to register
 - (+) display error on registration + login.
 

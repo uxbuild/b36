@@ -36,18 +36,17 @@ const path = require("path");
 const isLoggedIn = async (req, res, next) => {
   console.log("*******");
   console.log("IsLoggedIn ");
-  
+
   // const headerAuth = req.headers.authorization;
   const authHeader = req.headers.authorization;
   const token = authHeader?.split(" ")[1];
   console.log("AUTHORIZATION header", authHeader);
   console.log("TOKEN", token);
 
-
-  if (!token){
-    console.log('no token..');
+  if (!token) {
+    console.log("no token..");
     return next();
-  } 
+  }
 
   try {
     req.user = await findUserWithToken(token);
@@ -62,7 +61,7 @@ const isLoggedIn = async (req, res, next) => {
 app.post("/api/auth/login", async (req, res, next) => {
   console.log("************");
   console.log("POST api/auth/login");
-  
+
   // res.send(req.body);
   // console.log("POST /api/auth/login", req.body);
 
@@ -78,14 +77,25 @@ app.post("/api/auth/login", async (req, res, next) => {
   }
 });
 
-// register
+// register new user
 app.post("/api/auth/register", async (req, res, next) => {
-  console.log("*******");
-  console.log("POST api/auth/register");
-  console.log("*******");
+  // console.log("*******");
+  // console.log("POST api/auth/register");
+  // console.log('req.body', req.body);
+  
 
   try {
-    res.send(await register(req.body));
+    // console.log('creating credentials before DB..');
+    const username = req.body.username;
+    const password = req.body.password; // hash this.
+    // console.log('we received username + password', `${username}, ${password}`);
+    
+    const salt = await bcrypt.genSalt(10);
+    const hashPass = await bcrypt.hash(password, salt);
+    // console.log('sending to DB credentials', `${username}, ${hashPass}`);
+    const user = await createUser({username, password:hashPass});
+    //what response?
+    res.status(201).json(user);
   } catch (error) {
     next(error);
   }
@@ -144,23 +154,8 @@ app.post("/api/users/:id/favorites", isLoggedIn, async (req, res, next) => {
   console.log("POST api/users/:id/favorites");
   console.log("req.params.id: ", req.params.id);
   console.log("req.user", req.user);
-  // console.log("auth.id", auth?.id);
-  console.log("********");
 
   try {
-    // res
-    //   .status(201)
-    //   .send(
-    //     await createFavorite({
-    //       user_id: req.params.id,
-    //       product_id: req.body.product_id,
-    //     })
-    //   );
-    // console.log("POST api/users/id/FAVORITES");
-
-    // console.log("POST params ID", req.params.id);
-    // console.log("POST req.user ID", req.user.id);
-
     // isLoggedIn validates token + req.user, or error 401.
     if (req.params.id !== req.user.id) {
       const error = Error("not authorized");
@@ -235,12 +230,12 @@ const init = async () => {
   // console.log('SALT // ', salt);
   const salt = await bcrypt.genSalt(10);
   // console.log("TEST SALT", JSON.stringify(salt));
-  const newPass = await bcrypt.hash("pass", salt);
+  const newPass = await bcrypt.hash("password", salt);
 
   const [moe, lucy, ethyl, curly, foo, bar, bazz, quq, fip] = await Promise.all(
     [
       createUser({
-        username: "mo",
+        username: "moe",
         password: newPass,
       }),
       createUser({

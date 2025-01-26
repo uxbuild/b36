@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 
-const Login = ({ login }) => {
+//error component
+const ErrorMessage = ({ errorText }) => {
+  return <div className="error-msg">{errorText}</div>;
+};
+
+//login component
+const Login = ({ login, register }) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
@@ -10,9 +16,10 @@ const Login = ({ login }) => {
   };
 
   // register
-  const onRegister = (e) => {
+  const onRegister = async (e) => {
     e.preventDefault();
     console.log("register clicked");
+    register({ username, password });
   };
 
   return (
@@ -20,7 +27,11 @@ const Login = ({ login }) => {
       <input
         value={username}
         placeholder="username"
-        onChange={(ev) => setUsername(ev.target.value)}
+        onChange={(ev) => {
+          setUsername(ev.target.value);
+          isError && setIsError(false);
+          isError && setErrorText("");
+        }}
       />
       <input
         value={password}
@@ -39,6 +50,9 @@ function App() {
   const [auth, setAuth] = useState({});
   const [products, setProducts] = useState([]);
   const [favorites, setFavorites] = useState([]);
+
+  const [isError, setIsError] = useState(false);
+  const [errorText, setErrorText] = useState("");
 
   useEffect(() => {
     attemptLoginWithToken();
@@ -101,6 +115,7 @@ function App() {
     }
   }, [auth]);
 
+  // LOGIN
   const login = async (credentials) => {
     console.log("LOGIN component click: ", credentials);
     // const token = window.localStorage.getItem('token');
@@ -116,6 +131,28 @@ function App() {
     if (response.ok) {
       window.localStorage.setItem("token", json.token);
       attemptLoginWithToken();
+    } else {
+      console.log(json);
+      setIsError(true);
+      setErrorText("Username or password is incorrect.");
+    }
+  };
+
+  //register
+  const register = async (credentials) => {
+    console.log("LOGIN register user click: ", credentials);
+
+    const response = await fetch("/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify(credentials),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    const json = await response.json();
+    if (response.ok) {
+      console.log("user registered", json); // test.
     } else {
       console.log(json);
     }
@@ -152,7 +189,7 @@ function App() {
 
   const removeFavorite = async (id) => {
     console.log("CLICK REMOVE FAVORITE", id);
-    const token = window.localStorage.getItem('token');
+    const token = window.localStorage.getItem("token");
     const response = await fetch(`/api/users/${auth.id}/favorites/${id}`, {
       method: "DELETE",
       headers: {
@@ -163,7 +200,7 @@ function App() {
     if (response.ok) {
       setFavorites(favorites.filter((favorite) => favorite.id !== id));
     } else {
-      console.log(json);
+      console.log(response);
     }
   };
 
@@ -175,10 +212,11 @@ function App() {
   return (
     <>
       {!auth.id ? (
-        <Login login={login} />
+        <Login login={login} register={register} isError={isError} setIsError={setIsError} errorText={errorText} setErrorText={setErrorText} />
       ) : (
         <button onClick={logout}>Logout {auth.username}</button>
       )}
+      <p>{isError && <ErrorMessage errorText={errorText} />}</p>
 
       <ul>
         {products.map((product) => {

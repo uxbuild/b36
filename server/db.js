@@ -36,6 +36,10 @@ const createTables = async () => {
 };
 
 const createUser = async ({ username, password }) => {
+  console.log('***********');
+  console.log('DB createUser username ', username );
+  console.log('DB createUser password', password );
+  
   const SQL = `
     INSERT INTO users(id, username, password) VALUES($1, $2, $3) RETURNING *
   `;

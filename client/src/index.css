@@ -10,3 +10,12 @@ form > * {
 li.favorite {
   border: solid 1px dodgerBlue;
 }
+
+.error-msg {
+  background-color: yellow;
+  color: red;
+  border: 1px;
+  border-style: solid;
+  border-color:red;
+  padding: 1em;
+}

@@ -11,9 +11,9 @@ const jwt = require("jsonwebtoken");
 
 const createTables = async () => {
   const SQL = `
-    DROP TABLE IF EXISTS favorites;
-    DROP TABLE IF EXISTS users;
-    DROP TABLE IF EXISTS products;
+    DROP TABLE IF EXISTS favorites CASCADE;
+    DROP TABLE IF EXISTS users CASCADE;
+    DROP TABLE IF EXISTS products CASCADE;
     CREATE TABLE users(
       id UUID PRIMARY KEY,
       username VARCHAR(20) UNIQUE NOT NULL,
@@ -25,9 +25,11 @@ const createTables = async () => {
     );
     CREATE TABLE favorites(
       id UUID PRIMARY KEY,
-      user_id UUID REFERENCES users(id) NOT NULL,
-      product_id UUID REFERENCES products(id) NOT NULL,
-      CONSTRAINT unique_user_id_and_product_id UNIQUE (user_id, product_id)
+      user_id UUID NOT NULL,
+      product_id UUID NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+      FOREIGN KEY (product_id) REFERENCES products(id) ON UPDATE CASCADE ON DELETE CASCADE,
+      CONSTRAINT unique_user_id_and_product_id UNIQUE (user_id, product_id) 
     );
   `;
   await client.query(SQL);
@@ -71,25 +73,12 @@ const register = async ({ username, password }) => {
 };
 
 const authenticate = async ({ username, password }) => {
-  console.log(
-    "DB authenticate (username, password)",
-    `${username} | ${password}`
-  );
-
-  // return "hello";
-
   const SQL = `
     SELECT id, password FROM users WHERE username=$1;
   `;
   const response = await client.query(SQL, [username]);
-  console.log("DB response", `${JSON.stringify(response.rows[0])}`);
   const hash = response?.rows[0].password;
   const match = await bcrypt.compare(password, hash);
-  console.log("**********");
-  console.log("PASSWORD", `"${password}"`);
-  console.log("HASH EXTRACTED", hash);
-  console.log("MATCH", match);
-  console.log("**********");
 
   if (
     // !response.rows.length){
@@ -100,22 +89,16 @@ const authenticate = async ({ username, password }) => {
     error.status = 401;
     throw error;
   }
-  console.log("RESPONSE query", JSON.stringify(response.rows[0]));
-  // console.log('BCRYPT', bcrypt);
-  console.log("password A", password);
-  console.log("password B", response.rows[0].password);
 
-  // return { token: response.rows[0].id };
-  // generate new token with user-id in payload, using SECRET (JWT).
+  // NEW token with user-id in payload, using SECRET (JWT).
   const token = await jwt.sign({ id: response.rows[0].id }, JWT);
-  console.log("TOKEN auth login", token);
 
   return { token };
 };
 
 // const findUserWithToken = async(id)=> {
 const findUserWithToken = async (token) => {
-  console.log("findUserByTOKEN", `${token}`);
+  console.log("Express: FIND USER (id, username) BY TOKEN", `${token}`);
 
   // init id
   let id;
@@ -166,6 +149,12 @@ const fetchFavorites = async (user_id) => {
   return response.rows;
 };
 
+const fetchAllFavorites = async () => {
+  const SQL = `SELECT * FROM favorites`;
+  const response = await client.query(SQL);
+  return response.rows;
+}
+
 module.exports = {
   client,
   createTables,
@@ -178,4 +167,5 @@ module.exports = {
   destroyFavorite,
   authenticate,
   findUserWithToken,
+  fetchAllFavorites,
 };

@@ -10,6 +10,7 @@ const {
   destroyFavorite,
   authenticate,
   findUserWithToken,
+  fetchAllFavorites,
 } = require("./db");
 
 // express
@@ -23,17 +24,34 @@ const bcrypt = require("bcrypt");
 
 //for deployment only
 const path = require("path");
-app.get("/", (req, res) =>
-  res.sendFile(path.join(__dirname, "../client/dist/index.html"))
-);
-app.use(
-  "/assets",
-  express.static(path.join(__dirname, "../client/dist/assets"))
-);
+// app.get("/", (req, res) =>
+//   res.sendFile(path.join(__dirname, "../client/dist/index.html"))
+// );
+// app.use(
+//   "/assets",
+//   express.static(path.join(__dirname, "../client/dist/assets"))
+// );
 
+//ISLOG
 const isLoggedIn = async (req, res, next) => {
+  console.log("*******");
+  console.log("IsLoggedIn ");
+  
+  // const headerAuth = req.headers.authorization;
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.split(" ")[1];
+  console.log("AUTHORIZATION header", authHeader);
+  console.log("TOKEN", token);
+
+
+  if (!token){
+    console.log('no token..');
+    return next();
+  } 
+
   try {
-    req.user = await findUserByToken(req.headers.authorization);
+    req.user = await findUserWithToken(token);
+    console.log("req.user", req.user);
     next();
   } catch (ex) {
     next(ex);
@@ -42,8 +60,9 @@ const isLoggedIn = async (req, res, next) => {
 
 //call by App react component <Login /> if no token is found, (also, auth.id is undefined).
 app.post("/api/auth/login", async (req, res, next) => {
-  console.log("POST api auth login");
-
+  console.log("************");
+  console.log("POST api/auth/login");
+  
   // res.send(req.body);
   // console.log("POST /api/auth/login", req.body);
 
@@ -54,13 +73,17 @@ app.post("/api/auth/login", async (req, res, next) => {
     // authenticate returns a NEW token, or error: 401.
     res.send(await authenticate(req.body));
   } catch (ex) {
-    console.log("api/auth/login ERROR");
+    // console.log("api/auth/login ERROR");
     next(ex);
   }
 });
 
 // register
 app.post("/api/auth/register", async (req, res, next) => {
+  console.log("*******");
+  console.log("POST api/auth/register");
+  console.log("*******");
+
   try {
     res.send(await register(req.body));
   } catch (error) {
@@ -70,9 +93,13 @@ app.post("/api/auth/register", async (req, res, next) => {
 
 // app.get('/api/auth/me', async(req, res, next)=> {
 app.get("/api/auth/me", isLoggedIn, async (req, res, next) => {
+  console.log("********");
+  console.log("GET api/auth/me");
+
   try {
     // res.send(await findUserWithToken(req.headers.authorization));
-    //req.user is added by isLoggedIn middleware if token validated or throws 401 error.
+    // req.user is added by isLoggedIn middleware if token validated or throws 401 error.
+    console.log("req.user: ", req.user);
     res.send(req.user);
   } catch (ex) {
     next(ex);
@@ -80,6 +107,9 @@ app.get("/api/auth/me", isLoggedIn, async (req, res, next) => {
 });
 
 app.get("/api/users", async (req, res, next) => {
+  console.log("*******");
+  console.log("GET api/users");
+
   try {
     res.send(await fetchUsers());
   } catch (ex) {
@@ -87,7 +117,13 @@ app.get("/api/users", async (req, res, next) => {
   }
 });
 
+//GETFAV
 app.get("/api/users/:id/favorites", isLoggedIn, async (req, res, next) => {
+  console.log("********");
+  console.log("GET api/users/:id/favorites");
+  console.log("req.params.id: ", req.params.id);
+  console.log("req.user", req.user);
+
   try {
     // res.send(await fetchFavorites(req.params.id));
     // isLoggedIn validates token + sets req.user, or throws error.
@@ -104,6 +140,13 @@ app.get("/api/users/:id/favorites", isLoggedIn, async (req, res, next) => {
 });
 
 app.post("/api/users/:id/favorites", isLoggedIn, async (req, res, next) => {
+  console.log("********");
+  console.log("POST api/users/:id/favorites");
+  console.log("req.params.id: ", req.params.id);
+  console.log("req.user", req.user);
+  // console.log("auth.id", auth?.id);
+  console.log("********");
+
   try {
     // res
     //   .status(201)
@@ -113,6 +156,10 @@ app.post("/api/users/:id/favorites", isLoggedIn, async (req, res, next) => {
     //       product_id: req.body.product_id,
     //     })
     //   );
+    // console.log("POST api/users/id/FAVORITES");
+
+    // console.log("POST params ID", req.params.id);
+    // console.log("POST req.user ID", req.user.id);
 
     // isLoggedIn validates token + req.user, or error 401.
     if (req.params.id !== req.user.id) {
@@ -136,9 +183,15 @@ app.delete(
   "/api/users/:user_id/favorites/:id",
   isLoggedIn,
   async (req, res, next) => {
+    console.log("*******");
+    console.log("DELETE api/users/:user_id/favorites/:id");
+    console.log("req.params.user_id: ", req.params.user_id);
+    console.log("req.params.id(favorites:/id): ", req.params.id);
+    console.log("req.user", req.user);
+
     try {
       // isLoggedIn validates token, appends req.user, or throws error.
-      if (req.params.id !== req.user.id) {
+      if (req.params.user_id !== req.user.id) {
         const error = Error("not authorized");
         error.status = 401;
         throw error;
@@ -153,6 +206,10 @@ app.delete(
 );
 
 app.get("/api/products", async (req, res, next) => {
+  console.log("********");
+  console.log("GET api/products");
+  console.log("********");
+
   try {
     res.send(await fetchProducts());
   } catch (ex) {
@@ -177,16 +234,13 @@ const init = async () => {
   console.log("tables created");
   // console.log('SALT // ', salt);
   const salt = await bcrypt.genSalt(10);
-  console.log("TEST SALT", JSON.stringify(salt));
-  const newPass = await bcrypt.hash("password", salt);
-  const test = await bcrypt.compare("password", newPass);
-  console.log("HASH CREATED", newPass);
-  console.log("TEST COMPARE", test);
+  // console.log("TEST SALT", JSON.stringify(salt));
+  const newPass = await bcrypt.hash("pass", salt);
 
   const [moe, lucy, ethyl, curly, foo, bar, bazz, quq, fip] = await Promise.all(
     [
       createUser({
-        username: "moe",
+        username: "mo",
         password: newPass,
       }),
       createUser({
@@ -202,22 +256,26 @@ const init = async () => {
         password: newPass,
       }),
 
-      createProduct({ name: "foo" }),
-      createProduct({ name: "bar" }),
-      createProduct({ name: "bazz" }),
-      createProduct({ name: "quq" }),
-      createProduct({ name: "fip" }),
+      createProduct({ name: "product A" }),
+      createProduct({ name: "product B" }),
+      createProduct({ name: "product C" }),
+      createProduct({ name: "product D" }),
+      createProduct({ name: "product E" }),
     ]
   );
 
+  console.log("*** Users ***");
   console.log(await fetchUsers());
+  console.log("*** Products ***");
   console.log(await fetchProducts());
+  console.log("*** ALL Favorites ***");
+  console.log(await fetchAllFavorites());
+  console.log("*****************");
 
-  console.log(await fetchFavorites(moe.id));
-  const favorite = await createFavorite({
-    user_id: moe.id,
-    product_id: foo.id,
-  });
+  // const favorite = await createFavorite({
+  //   user_id: moe.id,
+  //   product_id: foo.id,
+  // });
   app.listen(port, () => console.log(`listening on port ${port}`));
 };
 

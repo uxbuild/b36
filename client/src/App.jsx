@@ -28,7 +28,9 @@ const Login = ({ login }) => {
         onChange={(ev) => setPassword(ev.target.value)}
       />
       <button disabled={!username || !password}>Login</button>
-      <button disabled={!username || !password} onClick={onRegister}>Register</button>
+      <button disabled={!username || !password} onClick={onRegister}>
+        Register
+      </button>
     </form>
   );
 };
@@ -42,16 +44,22 @@ function App() {
     attemptLoginWithToken();
   }, []);
 
+  //logwithtoken
   const attemptLoginWithToken = async () => {
     const token = window.localStorage.getItem("token");
+    console.log("ATTEMPT LOGIN W TOKEN", token);
+
     if (token) {
       const response = await fetch(`/api/auth/me`, {
         headers: {
-          authorization: token,
+          authorization: `Bearer ${token}`,
         },
       });
       const json = await response.json();
+      console.log("Init app. Logged in with TOKEN", json);
+
       if (response.ok) {
+        console.log("setAuth", json);
         setAuth(json);
       } else {
         window.localStorage.removeItem("token");
@@ -70,14 +78,23 @@ function App() {
   }, []);
 
   useEffect(() => {
+    // console.log('use effect..');
     const fetchFavorites = async () => {
-      const response = await fetch(`/api/users/${auth.id}/favorites`);
+      console.log(`fetching favorites (${auth.id})..`);
+      const response = await fetch(`/api/users/${auth.id}/favorites`, {
+        //REVIEW
+        headers: {
+          Authorization: `Bearer ${window.localStorage.getItem("token")}`,
+        },
+      });
       const json = await response.json();
       if (response.ok) {
+        console.log("response json", json);
         setFavorites(json);
       }
     };
     if (auth.id) {
+      console.log(`auth.id (${auth.id}) fetchFavorites()`);
       fetchFavorites();
     } else {
       setFavorites([]);
@@ -85,8 +102,8 @@ function App() {
   }, [auth]);
 
   const login = async (credentials) => {
-    console.log('LOGIN component click: ', credentials);
-    
+    console.log("LOGIN component click: ", credentials);
+    // const token = window.localStorage.getItem('token');
     const response = await fetch("/api/auth/login", {
       method: "POST",
       body: JSON.stringify(credentials),
@@ -96,34 +113,51 @@ function App() {
     });
 
     const json = await response.json();
-    // if (response.ok) {
-    //   window.localStorage.setItem("token", json.token);
-    //   // attemptLoginWithToken();
-    // } else {
-    //   console.log(json);
-    // }
+    if (response.ok) {
+      window.localStorage.setItem("token", json.token);
+      attemptLoginWithToken();
+    } else {
+      console.log(json);
+    }
   };
 
+  // ADDFAV
   const addFavorite = async (product_id) => {
+    console.log("************");
+    console.log("ADD FAVORITE auth.id", auth.id);
+    const token = window.localStorage.getItem("token");
+    console.log("get token", token);
+    console.log("product-id", product_id);
+
     const response = await fetch(`/api/users/${auth.id}/favorites`, {
       method: "POST",
       body: JSON.stringify({ product_id }),
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
     });
 
     const json = await response.json();
+
+    console.log("response json", json);
+
     if (response.ok) {
       setFavorites([...favorites, json]);
+      console.log("favorites (ADD)", favorites);
     } else {
       console.log(json);
     }
   };
 
   const removeFavorite = async (id) => {
+    console.log("CLICK REMOVE FAVORITE", id);
+    const token = window.localStorage.getItem('token');
     const response = await fetch(`/api/users/${auth.id}/favorites/${id}`, {
       method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     });
 
     if (response.ok) {

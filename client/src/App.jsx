@@ -6,18 +6,20 @@ const ErrorMessage = ({ errorText }) => {
 };
 
 //login component
-const Login = ({ login, register }) => {
+const Login = ({ login, register, errorText, clearError }) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
   const submit = (ev) => {
     ev.preventDefault();
+    clearError();
     login({ username, password });
   };
 
   // register
   const onRegister = async (e) => {
     e.preventDefault();
+    clearError();
     console.log("register clicked");
     register({ username, password });
   };
@@ -29,8 +31,7 @@ const Login = ({ login, register }) => {
         placeholder="username"
         onChange={(ev) => {
           setUsername(ev.target.value);
-          isError && setIsError(false);
-          isError && setErrorText("");
+          errorText && clearError();
         }}
       />
       <input
@@ -52,7 +53,14 @@ function App() {
   const [favorites, setFavorites] = useState([]);
 
   const [isError, setIsError] = useState(false);
-  const [errorText, setErrorText] = useState("");
+  const [errorText, setErrorText] = useState(null);
+
+  const clearError = () => {
+    setErrorText(null);
+  };
+  const setError = (msg) => {
+    setErrorText(msg);
+  };
 
   useEffect(() => {
     attemptLoginWithToken();
@@ -105,6 +113,8 @@ function App() {
       if (response.ok) {
         console.log("response json", json);
         setFavorites(json);
+      } else {
+        setError(json.message);
       }
     };
     if (auth.id) {
@@ -119,22 +129,33 @@ function App() {
   const login = async (credentials) => {
     console.log("LOGIN component click: ", credentials);
     // const token = window.localStorage.getItem('token');
-    const response = await fetch("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify(credentials),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    try {
+      console.log("LOGIN component TRY");
 
-    const json = await response.json();
-    if (response.ok) {
-      window.localStorage.setItem("token", json.token);
-      attemptLoginWithToken();
-    } else {
-      console.log(json);
-      setIsError(true);
-      setErrorText("Username or password is incorrect.");
+      console.log("login try fetch /api/auth/login");
+
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify(credentials),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const json = await response.json();
+      if (response.ok) {
+        console.log("LOGIN response OK");
+        clearError();
+        window.localStorage.setItem("token", json.token);
+        attemptLoginWithToken();
+      } else {
+        console.log("LOGIN response not-OK");
+        console.log(json);
+        setError("Username or password is incorrect.");
+      }
+    } catch (error) {
+      console.log("LOGIN catch error");
+      setError(error.message);
     }
   };
 
@@ -152,9 +173,11 @@ function App() {
 
     const json = await response.json();
     if (response.ok) {
+      clearError();
       console.log("user registered", json); // test.
     } else {
       console.log(json);
+      setError(json.message);
     }
   };
 
@@ -180,10 +203,12 @@ function App() {
     console.log("response json", json);
 
     if (response.ok) {
+      clearError();
       setFavorites([...favorites, json]);
       console.log("favorites (ADD)", favorites);
     } else {
       console.log(json);
+      setError(json.message);
     }
   };
 
@@ -198,25 +223,36 @@ function App() {
     });
 
     if (response.ok) {
+      clearError();
       setFavorites(favorites.filter((favorite) => favorite.id !== id));
     } else {
       console.log(response);
+      const json = response.json();
+      setError(json.message);
     }
   };
 
   const logout = () => {
     window.localStorage.removeItem("token");
+    clearError();
     setAuth({});
   };
 
   return (
     <>
       {!auth.id ? (
-        <Login login={login} register={register} isError={isError} setIsError={setIsError} errorText={errorText} setErrorText={setErrorText} />
+        <Login
+          login={login}
+          register={register}
+          errorText={errorText}
+          setErrorText={setErrorText}
+          clearError={clearError}
+          //login, register, errorText, clearError
+        />
       ) : (
         <button onClick={logout}>Logout {auth.username}</button>
       )}
-      <p>{isError && <ErrorMessage errorText={errorText} />}</p>
+      <p>{errorText && <ErrorMessage errorText={errorText} />}</p>
 
       <ul>
         {products.map((product) => {

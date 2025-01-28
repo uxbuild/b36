@@ -37,7 +37,6 @@ const isLoggedIn = async (req, res, next) => {
   console.log("*******");
   console.log("IsLoggedIn ");
 
-  // const headerAuth = req.headers.authorization;
   const authHeader = req.headers.authorization;
   const token = authHeader?.split(" ")[1];
   console.log("AUTHORIZATION header", authHeader);
@@ -70,9 +69,13 @@ app.post("/api/auth/login", async (req, res, next) => {
     // res.send('POST api auth login');
     // authenticate: throws error if (body.username) not found, or (body.password) not match (bcrypt.compare to encrypted pw in DB).
     // authenticate returns a NEW token, or error: 401.
+    console.log('server authenticate req.body ', req.body);
     res.send(await authenticate(req.body));
   } catch (ex) {
-    // console.log("api/auth/login ERROR");
+    // if authenticate throws an error we end up here..
+    console.log("api/auth/login ERROR");
+    // how to display errors invoked from data layer .. ??
+    // is this caught by the generic error middleware ..??
     next(ex);
   }
 });
@@ -203,7 +206,6 @@ app.delete(
 app.get("/api/products", async (req, res, next) => {
   console.log("********");
   console.log("GET api/products");
-  console.log("********");
 
   try {
     res.send(await fetchProducts());

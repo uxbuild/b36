@@ -6,8 +6,8 @@
 - route: get favorites (GET api/users/id/favorites) DONE
 - route: add favorite (POST api/users/id/favorites) DONE
 - route: remove favorite (DELETE api/users/userid/favorites/id) DONE
-- (+) ability to register
-- (+) display error on registration + login.
+- (+) ability to register / DONE
+- (+) display error on registration + login / DONE
 
 
 

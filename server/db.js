@@ -77,18 +77,21 @@ const register = async ({ username, password }) => {
 };
 
 const authenticate = async ({ username, password }) => {
+  console.log('authenticate username, password', `${username}, ${password}`);
+  
   const SQL = `
     SELECT id, password FROM users WHERE username=$1;
   `;
   const response = await client.query(SQL, [username]);
-  const hash = response?.rows[0].password;
-  const match = await bcrypt.compare(password, hash);
-
+  // const match = await bcrypt.compare(password, hash);
+  
   if (
     // !response.rows.length){
+      // const hash = response?.rows[0].password;
     !response.rows.length ||
     (await bcrypt.compare(password, response.rows[0].password)) === false
   ) {
+    // no username found, or password not a match.
     const error = Error("not authorized");
     error.status = 401;
     throw error;
